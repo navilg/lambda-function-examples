@@ -33,7 +33,8 @@ def list_ec2_instance(region,filter_tag_key,filter_tag_value,state='all'):
 def start_ec2_instance(region,filter_tag_key="",filter_tag_value=""):
     instances_to_start = list_ec2_instance(region,filter_tag_key,filter_tag_value,state='stopped')
     instance_state_changed = 0
-    print("Instances to start: "+instances_to_start)
+    print("Starting")
+    print(instances_to_start)
     for instance in instances_to_start:
         instance.start()
         instance_state_changed += 1
@@ -42,7 +43,8 @@ def start_ec2_instance(region,filter_tag_key="",filter_tag_value=""):
 def stop_ec2_instance(region,filter_tag_key="",filter_tag_value=""):
     instances_to_stop = list_ec2_instance(region,filter_tag_key,filter_tag_value,state='running')
     instance_state_changed = 0
-    print("Instances to stop: "+instances_to_stop)
+    print("Stopping")
+    print(instances_to_stop)
     for instance in instances_to_stop:
         instance.stop()
         instance_state_changed += 1
