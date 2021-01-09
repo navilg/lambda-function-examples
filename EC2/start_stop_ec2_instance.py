@@ -1,5 +1,9 @@
 import os
 import boto3
+from botocore.exceptions import ClientError
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 
 '''
 # event JSON example
@@ -50,21 +54,47 @@ def stop_ec2_instance(region,filter_tag_key="",filter_tag_value=""):
         instance_state_changed += 1
     return instance_state_changed
 
+def send_mail_ses(region,fromaddr,toaddr,subject,body):
+    client = boto3.client(service_name = 'ses', region_name = region)
+    message = MIMEMultipart()
+    message['Subject'] = subject
+    message['From'] = fromaddr
+    message['To'] = toaddr
+    print("Sending mail to ",message['To'])
+    # Message body
+
+    content = MIMEText(body, 'html')
+    message.attach(content)
+
+    destination = { 'ToAddresses' : [message['To']], 'CcAddresses' : [], 'BccAddresses' : []}
+
+    client.send_raw_email(Source = message['From'], Destinations = [message['To']], RawMessage = {'Data': message.as_string(),})
+
+
 def lambda_handler(event,context):
     #region = os.getenv('REGION','ap-south-1')
     region = event.get('region')
     action = os.getenv('ACTION','list')
     filter_tag_key = event.get('filter_tag_key')
     filter_tag_value = event.get('filter_tag_value')
+    fromaddr = "navilg0409@gmail.com"
+    toaddr = "navilg0409@gmail.com"
 
     instance_status_change = 0
     if(event.get('action') == 'start'):
         instance_status_change = start_ec2_instance(region,filter_tag_key,filter_tag_value)
+        if(instance_status_change > 0):
+            subject = "EC2 instance started"
+            body = str(instance_status_change)+" instance/s started in "+str(region)
+            send_mail_ses(region,fromaddr,toaddr,subject,body)
     elif(event.get('action') == 'stop'):
         instance_status_change = stop_ec2_instance(region,filter_tag_key,filter_tag_value)
+        if(instance_status_change > 0):
+            subject = "EC2 instance stopped"
+            body = str(instance_status_change)+" instance/s stopped in "+str(region)
+            send_mail_ses(region,fromaddr,toaddr,subject,body)
     else:
         instance_status_change = list_ec2_instance(region)
 
     return instance_status_change
-
-
+    
