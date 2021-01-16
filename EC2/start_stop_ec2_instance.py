@@ -42,7 +42,7 @@ def start_ec2_instance(region,filter_tag_key="",filter_tag_value=""):
     for instance in instances_to_start:
         instance.start()
         instance_state_changed += 1
-    return instance_state_changed
+    return instance_state_changed,instances_to_start
 
 def stop_ec2_instance(region,filter_tag_key="",filter_tag_value=""):
     instances_to_stop = list_ec2_instance(region,filter_tag_key,filter_tag_value,state='running')
@@ -52,7 +52,7 @@ def stop_ec2_instance(region,filter_tag_key="",filter_tag_value=""):
     for instance in instances_to_stop:
         instance.stop()
         instance_state_changed += 1
-    return instance_state_changed
+    return instance_state_changed,instances_to_stop
 
 def send_mail_ses(region,fromaddr,toaddr,subject,body):
     client = boto3.client(service_name = 'ses', region_name = region)
@@ -82,19 +82,18 @@ def lambda_handler(event,context):
 
     instance_status_change = 0
     if(event.get('action') == 'start'):
-        instance_status_change = start_ec2_instance(region,filter_tag_key,filter_tag_value)
+        instance_status_change,instance_list = start_ec2_instance(region,filter_tag_key,filter_tag_value)
         if(instance_status_change > 0):
             subject = "EC2 instance started"
-            body = str(instance_status_change)+" instance/s started in "+str(region)
+            body = str(instance_status_change)+" instance/s started in "+str(region)+" --> "+str(instance_list)
             send_mail_ses(region,fromaddr,toaddr,subject,body)
     elif(event.get('action') == 'stop'):
-        instance_status_change = stop_ec2_instance(region,filter_tag_key,filter_tag_value)
+        instance_status_change,instance_list = stop_ec2_instance(region,filter_tag_key,filter_tag_value)
         if(instance_status_change > 0):
             subject = "EC2 instance stopped"
-            body = str(instance_status_change)+" instance/s stopped in "+str(region)
+            body = str(instance_status_change)+" instance/s stopped in "+str(region)+" --> "+str(instance_list)
             send_mail_ses(region,fromaddr,toaddr,subject,body)
     else:
         instance_status_change = list_ec2_instance(region)
 
     return instance_status_change
-    
